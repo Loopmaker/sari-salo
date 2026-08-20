@@ -15,18 +15,27 @@ export async function POST(req: NextRequest) {
   }
 
   const { order, items } = parsed.data;
-
-  // Validate referenced products actually exist before touching the DB
   const productIds = items.map((i) => i.productId);
-  const foundProducts = await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: { id: { in: productIds } },
-    select: { id: true },
   });
-  if (foundProducts.length !== new Set(productIds).size) {
-    return NextResponse.json(
-      { error: "One or more products not found" },
-      { status: 422 },
-    );
+
+  const productMap = new Map(products.map((p) => [p.id, p]));
+
+  for (const item of items) {
+    const product = productMap.get(item.productId);
+    if (!product) {
+      return NextResponse.json(
+        { error: `Product not found: ${item.productId}` },
+        { status: 422 },
+      );
+    }
+    if (!product.active) {
+      return NextResponse.json(
+        { error: `Product is no longer available: ${product.name}` },
+        { status: 422 },
+      );
+    }
   }
 
   const existing = await prisma.order.findUnique({ where: { id: order.id } });
@@ -39,25 +48,35 @@ export async function POST(req: NextRequest) {
 
   try {
     const created = await prisma.$transaction(async (tx) => {
+      let total = new Prisma.Decimal(0);
+      const itemsWithPrice = items.map((item) => {
+        const product = productMap.get(item.productId)!;
+        const lineTotal = product.price.mul(item.quantity);
+        total = total.add(lineTotal);
+        return {
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          priceAtOrder: product.price,
+        };
+      });
+
       const newOrder = await tx.order.create({
         data: {
           id: order.id,
           orderNumber: order.orderNumber,
           terminalId: order.terminalId,
           status: order.status,
-          total: order.total,
+          total,
           clientModifiedAt: new Date(order.clientModifiedAt),
           createdAt: new Date(order.createdAt),
         },
       });
 
       await tx.orderItem.createMany({
-        data: items.map((item) => ({
-          id: item.id,
+        data: itemsWithPrice.map((item) => ({
+          ...item,
           orderId: newOrder.id,
-          productId: item.productId,
-          quantity: item.quantity,
-          priceAtOrder: item.priceAtOrder,
         })),
       });
 
@@ -69,10 +88,6 @@ export async function POST(req: NextRequest) {
       { status: 201 },
     );
   } catch (err) {
-    // Race: two concurrent requests both passed findUnique before either
-    // committed. The DB's unique constraint on `id` is the real source
-    // of truth — catch it and treat it as "already existed" instead of
-    // surfacing a 500.
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
