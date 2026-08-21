@@ -62,6 +62,8 @@ interface LocalSyncOperation {
   attempts: number;
   lastError: string | null;
   createdAt: string;
+  nextAttemptAt: string;
+  permanentFailure: boolean;
 }
 
 interface TerminalMeta {
@@ -90,7 +92,8 @@ class SariPOSDatabase extends Dexie {
       orders: "id, syncStatus, status, createdAt",
       orderItems: "id, orderId",
       orderStatusEvents: "id, orderId, syncStatus, createdAt",
-      syncOperations: "id, status, entityType, [status+createdAt]",
+      syncOperations:
+        "id, status, entityType, [status+createdAt], [status+nextAttemptAt]",
       meta: "key",
     });
   }

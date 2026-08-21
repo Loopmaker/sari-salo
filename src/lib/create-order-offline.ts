@@ -13,8 +13,6 @@ export async function createOrderOffline(cart: CartLineInput[]) {
   const now = new Date().toISOString();
   const orderId = crypto.randomUUID();
 
-  // Integer-centavo arithmetic avoids floating-point drift when
-  // summing money across multiple cart lines.
   const totalCents = cart.reduce(
     (sum, line) =>
       sum + Math.round(parseFloat(line.price) * 100) * line.quantity,
@@ -24,12 +22,6 @@ export async function createOrderOffline(cart: CartLineInput[]) {
 
   let resultOrderNumber = "";
 
-  // Single Dexie transaction spanning: sequence allocation, order
-  // write, item writes, and sync-operation creation. This is the
-  // "never split the write" invariant from the offline-data-flow
-  // design — if the app crashes mid-transaction, either everything
-  // lands or nothing does. There is no partial state where an order
-  // exists without a corresponding sync operation.
   await db.transaction(
     "rw",
     db.orders,
@@ -63,17 +55,34 @@ export async function createOrderOffline(cart: CartLineInput[]) {
 
       await db.orders.add(order);
       await db.orderItems.bulkAdd(items);
+      const syncPayload = {
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          terminalId: order.terminalId,
+          status: order.status,
+          clientModifiedAt: order.clientModifiedAt,
+          createdAt: order.createdAt,
+        },
+        items: items.map((item) => ({
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+      };
 
       await db.syncOperations.add({
         id: crypto.randomUUID(),
         entityType: "ORDER" as const,
         entityId: orderId,
         operation: "CREATE_ORDER" as const,
-        payload: { order, items },
+        payload: syncPayload,
         status: "PENDING" as const,
         attempts: 0,
         lastError: null,
         createdAt: now,
+        nextAttemptAt: now, // immediately eligible for the first sync attempt
+        permanentFailure: false,
       });
     },
   );
