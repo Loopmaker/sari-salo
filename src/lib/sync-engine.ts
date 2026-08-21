@@ -9,10 +9,6 @@ function computeNextAttempt(attempts: number): string {
   return new Date(Date.now() + delay).toISOString();
 }
 
-// Network/5xx/timeout are treated as retryable — the world might just
-// be flaky right now. 4xx (validation, invalid transition, not found)
-// are permanent — retrying the exact same payload won't change the
-// outcome, so don't waste retry cycles on it.
 function classifyFailure(httpStatus: number | null): "retryable" | "permanent" {
   if (httpStatus === null) return "retryable"; // network error/timeout, no response at all
   if (httpStatus >= 500) return "retryable";
@@ -20,11 +16,6 @@ function classifyFailure(httpStatus: number | null): "retryable" | "permanent" {
   return "retryable";
 }
 
-// Heartbeat is a GATE, not a guarantee. It avoids obviously pointless
-// sync attempts (server unreachable), but the sync loop's own
-// per-request error handling is what actually catches "heartbeat
-// passed, then network dropped mid-sync" — that's just a normal
-// retryable failure hitting classifyFailure() below.
 async function checkHeartbeat(): Promise<boolean> {
   try {
     const res = await fetch("/api/ping", { cache: "no-store" });
@@ -34,9 +25,6 @@ async function checkHeartbeat(): Promise<boolean> {
   }
 }
 
-// Operations for the same entity must process in the correct order.
-// For v1's realistic queue size, global sequential processing
-// satisfies that trivially without needing per-entity grouping logic.
 async function getSyncableOperations() {
   const now = new Date().toISOString();
 
@@ -141,12 +129,12 @@ let syncInProgress = false;
 
 export async function runSyncCycle(): Promise<void> {
   if (syncInProgress) return;
-
-  const heartbeatOk = await checkHeartbeat();
-  if (!heartbeatOk) return;
-
   syncInProgress = true;
+
   try {
+    const heartbeatOk = await checkHeartbeat();
+    if (!heartbeatOk) return;
+
     const operations = await getSyncableOperations();
     for (const op of operations) {
       await processOperation(op);

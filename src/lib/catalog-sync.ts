@@ -16,10 +16,6 @@ interface RawCategory {
   products: RawProduct[];
 }
 
-// Validates the full payload shape before anything touches Dexie. A
-// malformed or partial server response must never be allowed to
-// replace a working local catalog — this is the gate that protects
-// that invariant, separate from the transaction's own atomicity.
 function validateCatalogPayload(
   data: unknown,
 ): data is { categories: RawCategory[] } {
@@ -48,11 +44,6 @@ function validateCatalogPayload(
   return true;
 }
 
-// Refreshes the local catalog cache from the server. This is a
-// best-effort background operation: if it fails validation or the
-// network request fails, the existing Dexie catalog is left
-// completely untouched. The POS must always remain usable from
-// whatever catalog is already local.
 export async function refreshCatalogFromServer(): Promise<{ ok: boolean }> {
   try {
     const res = await fetch("/api/catalog");
@@ -60,8 +51,6 @@ export async function refreshCatalogFromServer(): Promise<{ ok: boolean }> {
 
     const data = await res.json();
 
-    // Gate: reject the entire refresh if the payload doesn't match
-    // the expected shape, before any Dexie write is attempted.
     if (!validateCatalogPayload(data)) return { ok: false };
 
     const categories = data.categories.map((c) => ({
@@ -81,9 +70,6 @@ export async function refreshCatalogFromServer(): Promise<{ ok: boolean }> {
       })),
     );
 
-    // Atomic swap: clear + repopulate both tables in one transaction.
-    // Combined with the validation gate above, this protects against
-    // both a bad payload AND a failure mid-write.
     await db.transaction("rw", db.categories, db.products, async () => {
       await db.categories.clear();
       await db.products.clear();
@@ -93,8 +79,6 @@ export async function refreshCatalogFromServer(): Promise<{ ok: boolean }> {
 
     return { ok: true };
   } catch {
-    // Network error, parse error, transaction failure — in every
-    // case, the previous catalog (if any) is untouched.
     return { ok: false };
   }
 }
