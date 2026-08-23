@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ProductGrid } from "./ProductGrid";
 import { CartPanel } from "./CartPanel";
 import { createOrderOffline } from "@/lib/create-order-offline";
+import { RecentOrders } from "./RecentOrders";
 
 export interface Product {
   id: string;
@@ -18,7 +19,7 @@ export interface Category {
 }
 
 export interface CartLine {
-  id: string; // client-generated OrderItem UUID
+  id: string;
   productId: string;
   name: string;
   price: string;
@@ -136,15 +137,20 @@ export function POSClient({ categories }: { categories: Category[] }) {
         />
       </div>
 
-      <CartPanel
-        cart={cart}
-        total={total}
-        submitting={submitting}
-        error={lastError}
-        confirmation={lastConfirmation}
-        onUpdateQuantity={updateQuantity}
-        onCheckout={checkout}
-      />
+      <div className="w-80 flex flex-col">
+        <CartPanel
+          cart={cart}
+          total={total}
+          submitting={submitting}
+          error={lastError}
+          confirmation={lastConfirmation}
+          onUpdateQuantity={updateQuantity}
+          onCheckout={checkout}
+        />
+        <div className="border-t p-4">
+          <RecentOrders />
+        </div>
+      </div>
     </div>
   );
 }

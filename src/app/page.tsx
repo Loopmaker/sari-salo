@@ -5,6 +5,7 @@ import { db } from "@/db/schema";
 import { getOrCreateTerminal } from "@/lib/terminal";
 import { refreshCatalogFromServer } from "@/lib/catalog-sync";
 import { POSClient, type Category } from "@/components/pos/POSClient";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function Home() {
   const [categories, setCategories] = useState<Category[] | null>(null);
@@ -35,7 +36,11 @@ export default function Home() {
     return <div className="p-8 text-gray-400">Loading catalog...</div>;
   }
 
-  return <POSClient categories={categories} />;
+  return (
+    <ErrorBoundary fallbackMessage="Reload the page to continue taking orders.">
+      <POSClient categories={categories} />
+    </ErrorBoundary>
+  );
 }
 
 async function loadCategoriesFromDexie(): Promise<Category[]> {
