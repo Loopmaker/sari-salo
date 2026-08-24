@@ -2,7 +2,7 @@
 
 An offline-first point-of-sale app for small Filipino food stalls, with a live kitchen display.
 
-I built SariPOS to go beyond basic CRUD applications and work through problems involving offline storage, background syncing, concurrent updates, retries, and real-time communication between the cashier and kitchen.
+I built Sari-Salo to go beyond basic CRUD applications and work through problems involving offline storage, background syncing, concurrent updates, retries, and real-time communication between the cashier and kitchen.
 
 ## What it does
 
@@ -40,7 +40,7 @@ The same ID is used when syncing the order to the server, allowing the API to sa
 
 Multiple devices can potentially update the same order.
 
-SariPOS uses a **last-write-wins (LWW)** strategy based on `clientModifiedAt`.
+Sari-Salo uses a **last-write-wins (LWW)** strategy based on `clientModifiedAt`.
 
 There is also an important rule around local changes:
 
@@ -101,7 +101,7 @@ Kitchen display updates
 
 ## Known limitations
 
-SariPOS is intentionally a v1 portfolio project, so some production features are outside the current scope.
+Sari-Salo is intentionally a v1 portfolio project, so some production features are outside the current scope.
 
 ### No authentication
 
@@ -147,7 +147,7 @@ This is a documented v1 tradeoff and would need to change before production depl
 
 ## What I'd build next
 
-If I continued developing SariPOS, the next priorities would be:
+If I continued developing Sari-Salo, the next priorities would be:
 
 1. Authentication and role-based access
 2. Manual recovery for permanently failed orders
@@ -157,7 +157,7 @@ If I continued developing SariPOS, the next priorities would be:
 
 ## Development process
 
-I built SariPOS iteratively, working through the system in phases rather than trying to design everything at once.
+I built Sari-Salo iteratively, working through the system in phases rather than trying to design everything at once.
 
 I used Claude as an implementation and brainstorming partner, while reviewing the architecture, testing behavior, and investigating edge cases throughout development.
 
@@ -167,7 +167,7 @@ That process was an important part of the project: the goal wasn't just to make 
 
 ## Project status
 
-SariPOS is a completed v1 portfolio project focused on demonstrating practical experience with:
+Sari-Salo is a completed v1 portfolio project focused on demonstrating practical experience with:
 
 - Offline-first application design
 - IndexedDB and local persistence

@@ -9,7 +9,7 @@ export function ProductGrid({
 }) {
   if (products.length === 0) {
     return (
-      <p className="text-gray-400">No products available in this category.</p>
+      <p className="text-ink/50">No products available in this category.</p>
     );
   }
 
@@ -19,10 +19,10 @@ export function ProductGrid({
         <button
           key={product.id}
           onClick={() => onSelect(product)}
-          className="border rounded-lg p-4 text-left hover:bg-gray-50"
+          className="bg-counter border border-counter-line rounded-lg p-4 text-left hover:bg-counter-line transition-colors"
         >
-          <div className="font-medium">{product.name}</div>
-          <div className="text-gray-600">₱{product.price}</div>
+          <div className="font-medium text-ink">{product.name}</div>
+          <div className="font-mono text-ink/70">₱{product.price}</div>
         </button>
       ))}
     </div>

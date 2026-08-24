@@ -18,10 +18,14 @@ export interface KitchenOrder {
 }
 
 const ACTIVE_STATUSES: OrderStatus[] = ["NEW", "PREPARING", "READY"];
-const COLUMNS: { status: OrderStatus; label: string }[] = [
-  { status: "NEW", label: "New" },
-  { status: "PREPARING", label: "Preparing" },
-  { status: "READY", label: "Ready" },
+const COLUMNS: { status: OrderStatus; label: string; colorClass: string }[] = [
+  { status: "NEW", label: "New", colorClass: "text-status-new" },
+  {
+    status: "PREPARING",
+    label: "Preparing",
+    colorClass: "text-status-pending",
+  },
+  { status: "READY", label: "Ready", colorClass: "text-status-ok" },
 ];
 
 const REALTIME_SETTLE_DELAY_MS = 3000;
@@ -212,18 +216,20 @@ export function KitchenBoard() {
   }
 
   if (loading) {
-    return <div className="p-8 text-gray-400">Loading orders...</div>;
+    return <div className="p-8 text-ink/50">Loading orders...</div>;
   }
 
   return (
     <div className="p-4">
       {advanceError && (
-        <div className="mb-4 text-red-600 text-sm">{advanceError}</div>
+        <div className="mb-4 text-status-attention text-sm">{advanceError}</div>
       )}
       <div className="flex gap-4 h-screen">
         {COLUMNS.map((col) => (
-          <div key={col.status} className="flex-1 bg-gray-50 rounded-lg p-3">
-            <h2 className="font-semibold mb-3">{col.label}</h2>
+          <div key={col.status} className="flex-1 bg-counter/40 rounded-lg p-3">
+            <h2 className={`font-semibold mb-3 ${col.colorClass}`}>
+              {col.label}
+            </h2>
             <div className="space-y-3">
               {orders
                 .filter((o) => o.status === col.status)
