@@ -1,10 +1,11 @@
 import Image from "next/image";
+import { getProductImageUrl } from "@/lib/storage";
 
 export interface StorefrontProduct {
   id: string;
   name: string;
   price: string;
-  imageUrl?: string;
+  imagePath?: string;
 }
 
 export function StorefrontProductCard({
@@ -23,9 +24,9 @@ export function StorefrontProductCard({
           featured ? "flex-1 min-h-48" : "aspect-square max-h-56"
         }`}
       >
-        {product.imageUrl ? (
+        {product.imagePath ? (
           <Image
-            src={product.imageUrl}
+            src={getProductImageUrl(product.imagePath)}
             alt={product.name}
             fill
             className="object-cover"
