@@ -13,6 +13,12 @@ interface StorefrontCategory {
   products: StorefrontProduct[];
 }
 
+const TODAYS_SPECIAL: StorefrontProduct[] = [
+  { id: "m3", name: "Beef Caldereta", price: "110.00" },
+  { id: "m1", name: "Chicken Rice", price: "85.00" },
+  { id: "d2", name: "Buko Juice", price: "35.00" },
+];
+
 const DUMMY_CATEGORIES: StorefrontCategory[] = [
   {
     id: "meals",
@@ -59,18 +65,75 @@ export function StorefrontClient() {
   const activeProducts =
     DUMMY_CATEGORIES.find((c) => c.id === activeCategory)?.products ?? [];
 
+  // Real, computed counts — not a marketing stat. Reflects whatever the
+  // catalog actually contains (dummy today, real once data-driven).
+  const dishCount = DUMMY_CATEGORIES.reduce(
+    (sum, cat) => sum + cat.products.length,
+    0,
+  );
+  const categoryCount = DUMMY_CATEGORIES.length;
+
   return (
     <div className="min-h-screen bg-paper">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-counter-line">
+      <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-paper border-b border-counter-line">
         <h1 className="font-semibold text-lg text-ink">Sari-Salo</h1>
       </header>
 
-      <section className="bg-counter border-b border-counter-line px-6 py-10">
-        <p className="text-annatto font-medium text-sm mb-2">Fresh today</p>
-        <h2 className="text-3xl font-semibold text-ink mb-2">
-          Home-cooked meals, made fresh
-        </h2>
-        <p className="text-ink/70">Browse today&apos;s menu below.</p>
+      <section className="relative px-6 py-16 sm:py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-linear-to-br from-steel to-ink" />
+        <div className="absolute inset-0 flex items-center justify-center text-paper/30 text-xs tracking-wide">
+          photo placeholder
+        </div>
+        <div className="relative max-w-lg">
+          <p className="text-annatto font-medium text-sm mb-3">Fresh today</p>
+          <h2 className="text-4xl sm:text-5xl font-semibold text-paper leading-tight mb-2">
+            Home-cooked meals,
+          </h2>
+          <h2 className="text-4xl sm:text-5xl font-semibold text-paper leading-tight mb-6">
+            made fresh.
+          </h2>
+          <button
+            onClick={() =>
+              gridRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              })
+            }
+            className="bg-annatto text-white px-6 py-3 rounded-lg font-medium hover:bg-annatto/90 transition-colors mb-6"
+          >
+            Explore menu →
+          </button>
+          <p className="font-mono text-paper/70 text-sm">
+            {dishCount} dishes · {categoryCount} categories
+          </p>
+        </div>
+      </section>
+
+      <section className="px-6 py-8 border-b border-counter-line">
+        <p className="text-ink/50 text-xs font-medium tracking-wide uppercase mb-3">
+          Today&apos;s special
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 sm:grid-rows-2 gap-4">
+          <div className="sm:col-span-2 sm:row-span-2">
+            <StorefrontProductCard
+              product={TODAYS_SPECIAL[0]}
+              onQuickAdd={handleQuickAdd}
+              featured
+            />
+          </div>
+          <div className="sm:col-start-3 sm:row-start-1">
+            <StorefrontProductCard
+              product={TODAYS_SPECIAL[1]}
+              onQuickAdd={handleQuickAdd}
+            />
+          </div>
+          <div className="sm:col-start-3 sm:row-start-2">
+            <StorefrontProductCard
+              product={TODAYS_SPECIAL[2]}
+              onQuickAdd={handleQuickAdd}
+            />
+          </div>
+        </div>
       </section>
 
       <nav className="flex gap-2 px-6 py-4 overflow-x-auto">
@@ -90,7 +153,7 @@ export function StorefrontClient() {
         ))}
       </nav>
 
-      <main className="px-6 pb-10">
+      <main ref={gridRef} className="px-6 pb-10">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {activeProducts.map((product) => (
             <StorefrontProductCard
