@@ -6,6 +6,7 @@ import { getOrCreateTerminal } from "@/lib/terminal";
 import { refreshCatalogFromServer } from "@/lib/catalog-sync";
 import { POSClient, type Category } from "@/components/pos/POSClient";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SyncEngineProvider } from "@/components/SyncEngineProvider";
 
 export default function Home() {
   const [categories, setCategories] = useState<Category[] | null>(null);
@@ -38,6 +39,7 @@ export default function Home() {
 
   return (
     <ErrorBoundary fallbackMessage="Reload the page to continue taking orders.">
+      <SyncEngineProvider />
       <POSClient categories={categories} />
     </ErrorBoundary>
   );

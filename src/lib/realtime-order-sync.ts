@@ -49,7 +49,13 @@ export function attachRealtimeOrderSync(): () => void {
       { event: "UPDATE", schema: "public", table: "Order" },
       (payload) => {
         const row = payload.new as RealtimeOrderRow | undefined;
-        if (!row) return;
+        if (!row?.id) {
+          console.warn(
+            "Ignoring Realtime order event with invalid payload:",
+            payload.new,
+          );
+          return;
+        }
 
         if (!ready) {
           buffered.push(row);
