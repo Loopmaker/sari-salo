@@ -74,7 +74,7 @@ interface TerminalMeta {
   createdAt: string;
 }
 
-class SariPOSDatabase extends Dexie {
+class SariSaloDatabase extends Dexie {
   categories!: Table<LocalCategory, string>;
   products!: Table<LocalProduct, string>;
   orders!: Table<LocalOrder, string>;
@@ -84,7 +84,7 @@ class SariPOSDatabase extends Dexie {
   meta!: Table<TerminalMeta, string>;
 
   constructor() {
-    super("saripos");
+    super("sari-salo");
 
     this.version(1).stores({
       categories: "id",
@@ -99,4 +99,4 @@ class SariPOSDatabase extends Dexie {
   }
 }
 
-export const db = new SariPOSDatabase();
+export const db = new SariSaloDatabase();
