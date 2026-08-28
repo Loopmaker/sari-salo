@@ -5,6 +5,10 @@ import { supabase } from "@/lib/supabase-client";
 import { OrderCard } from "./OrderCard";
 import { getKitchenTerminalId } from "@/lib/kitchen-terminal";
 import { getNextKitchenStatus } from "@/lib/kitchen-status";
+import {
+  KitchenSyncIndicator,
+  type RealtimeConnectionState,
+} from "./KitchenSyncIndicator";
 
 type OrderStatus = "NEW" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
 
@@ -73,6 +77,8 @@ export function KitchenBoard() {
   const [loading, setLoading] = useState(true);
   const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
+  const [connectionState, setConnectionState] =
+    useState<RealtimeConnectionState>("connecting");
 
   const readyRef = useRef(false);
   const bufferedEventsRef = useRef<
@@ -136,7 +142,17 @@ export function KitchenBoard() {
 
     const subscribed = new Promise<void>((resolve) => {
       channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") resolve();
+        if (status === "SUBSCRIBED") {
+          resolve();
+          if (readyRef.current) setConnectionState("connected");
+        } else if (
+          readyRef.current &&
+          (status === "CLOSED" ||
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT")
+        ) {
+          setConnectionState("disconnected");
+        }
       });
     });
 
@@ -166,6 +182,7 @@ export function KitchenBoard() {
 
         readyRef.current = true;
         commitOrders(result);
+        setConnectionState("connected");
 
         if (needsRefetchAfterInit) triggerCoalescedRefetch();
       })
@@ -245,6 +262,7 @@ export function KitchenBoard() {
           </div>
         ))}
       </div>
+      <KitchenSyncIndicator connectionState={connectionState} />
     </div>
   );
 }

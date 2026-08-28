@@ -1,4 +1,5 @@
 import type { CartLine } from "./POSClient";
+import { CashierSyncIndicator } from "./CashierSyncIndicator";
 
 interface Confirmation {
   orderNumber: string;
@@ -84,6 +85,8 @@ export function CartPanel({
           {submitting ? "Saving..." : "Place Order"}
         </button>
       </div>
+
+      <CashierSyncIndicator />
     </div>
   );
 }

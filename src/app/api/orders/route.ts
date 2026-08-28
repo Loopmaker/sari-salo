@@ -92,12 +92,29 @@ export async function POST(req: NextRequest) {
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      const raceWinner = await prisma.order.findUnique({
-        where: { id: order.id },
-      });
+      const target = err.meta?.target;
+      const isIdConflict =
+        Array.isArray(target) && target.length === 1 && target[0] === "id";
+
+      if (isIdConflict) {
+        const raceWinner = await prisma.order.findUnique({
+          where: { id: order.id },
+        });
+        return NextResponse.json(
+          { order: raceWinner, alreadyExisted: true },
+          { status: 200 },
+        );
+      }
+
       return NextResponse.json(
-        { order: raceWinner, alreadyExisted: true },
-        { status: 200 },
+        {
+          error: "Order number already used for this terminal",
+          details: {
+            terminalId: order.terminalId,
+            orderNumber: order.orderNumber,
+          },
+        },
+        { status: 409 },
       );
     }
     throw err;

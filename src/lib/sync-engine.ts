@@ -133,6 +133,7 @@ export async function runSyncCycle(): Promise<void> {
 
   try {
     const heartbeatOk = await checkHeartbeat();
+    setLastHeartbeatOk(heartbeatOk);
     if (!heartbeatOk) return;
 
     const operations = await getSyncableOperations();
@@ -142,6 +143,24 @@ export async function runSyncCycle(): Promise<void> {
   } finally {
     syncInProgress = false;
   }
+}
+
+let lastHeartbeatOk = true; // optimistic default so boot doesn't flash "offline"
+const heartbeatListeners = new Set<() => void>();
+
+export function getLastHeartbeatOk(): boolean {
+  return lastHeartbeatOk;
+}
+
+export function subscribeHeartbeat(listener: () => void): () => void {
+  heartbeatListeners.add(listener);
+  return () => heartbeatListeners.delete(listener);
+}
+
+function setLastHeartbeatOk(ok: boolean) {
+  if (lastHeartbeatOk === ok) return;
+  lastHeartbeatOk = ok;
+  heartbeatListeners.forEach((listener) => listener());
 }
 
 const PERIODIC_SYNC_INTERVAL_MS = 20_000; // 20s
