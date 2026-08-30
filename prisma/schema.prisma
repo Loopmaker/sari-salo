@@ -60,6 +60,7 @@ model Order {
   terminalId       String
   status           OrderStatus @default(NEW)
   total            Decimal  @db.Decimal(10, 2)
+  customerName     String?
   clientModifiedAt DateTime
   serverUpdatedAt  DateTime @updatedAt
   createdAt        DateTime @default(now())
@@ -70,6 +71,14 @@ model Order {
   @@unique([terminalId, orderNumber])
   @@index([status])
   @@index([createdAt])
+}
+
+// Atomic, server-authoritative sequence for storefront order numbers.
+// One row per stall business day (Asia/Manila) — see
+// lib/storefront-order-number.ts for how it's incremented and why.
+model DailyOrderCounter {
+  date  String @id
+  count Int    @default(0)
 }
 
 model OrderItem {
