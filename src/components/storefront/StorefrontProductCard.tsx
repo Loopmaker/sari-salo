@@ -18,7 +18,7 @@ export function StorefrontProductCard({
   featured?: boolean;
 }) {
   return (
-    <div className="bg-counter border border-counter-line rounded-lg overflow-hidden flex flex-col h-full">
+    <div className="storefront-product-card bg-counter border border-counter-line rounded-lg overflow-hidden flex flex-col h-full">
       <div
         className={`relative bg-counter-line/40 flex items-center justify-center text-ink/30 text-sm ${
           featured ? "flex-1 min-h-48" : "aspect-square max-h-56"

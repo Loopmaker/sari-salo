@@ -36,3 +36,33 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
 }
+
+.storefront-product-card {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .storefront-product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--ink) 12%, transparent);
+  }
+}
+
+.storefront-product-card:active {
+  transform: translateY(-1px);
+  transition-duration: 90ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storefront-product-card {
+    transition: none;
+  }
+
+  .storefront-product-card:hover,
+  .storefront-product-card:active {
+    transform: none;
+    box-shadow: none;
+  }
+}
