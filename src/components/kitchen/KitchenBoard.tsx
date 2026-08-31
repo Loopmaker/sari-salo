@@ -16,6 +16,7 @@ export interface KitchenOrder {
   id: string;
   orderNumber: string;
   status: OrderStatus;
+  customerName: string | null;
   clientModifiedAt: string;
   createdAt: string;
   items: { id: string; productName: string; quantity: number }[];

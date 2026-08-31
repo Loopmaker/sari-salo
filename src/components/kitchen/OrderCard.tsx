@@ -50,6 +50,9 @@ export function OrderCard({
           {formatElapsed(elapsedMs)}
         </div>
       </div>
+      {order.customerName && (
+        <div className="text-sm text-ink/60 mb-2">{order.customerName}</div>
+      )}
       <ul className="text-sm text-ink/80 mb-3 space-y-1">
         {order.items.map((item) => (
           <li key={item.id}>
