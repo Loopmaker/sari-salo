@@ -31,9 +31,19 @@ async function getStorefrontCatalog(): Promise<{
     })),
   }));
 
-  // No "featured" concept in the schema yet — first 3 active products,
-  // in the same deterministic (alphabetical) order as the menu itself.
-  const todaysSpecial = serialized.flatMap((cat) => cat.products).slice(0, 3);
+  const FEATURED_CATEGORY_PRIORITY = ["Meals"];
+  const categoriesForSpecial = [...serialized].sort((a, b) => {
+    const aIsPriority = FEATURED_CATEGORY_PRIORITY.includes(a.name);
+    const bIsPriority = FEATURED_CATEGORY_PRIORITY.includes(b.name);
+    if (aIsPriority && !bIsPriority) return -1;
+    if (bIsPriority && !aIsPriority) return 1;
+    return 0; // otherwise preserve existing (alphabetical) order
+  });
+
+  const todaysSpecial = categoriesForSpecial
+    .filter((cat) => cat.products.length > 0)
+    .slice(0, 3)
+    .map((cat) => cat.products[0]);
 
   return { categories: serialized, todaysSpecial };
 }

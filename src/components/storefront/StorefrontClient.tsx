@@ -1,7 +1,7 @@
 "use client";
-"use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   StorefrontProductCard,
   type StorefrontProduct,
@@ -11,6 +11,7 @@ import {
   StorefrontCartDrawer,
   type CheckoutView,
 } from "./StorefrontCartDrawer";
+import { getProductImageUrl } from "@/lib/storage";
 
 export interface StorefrontCategory {
   id: string;
@@ -226,10 +227,14 @@ export function StorefrontClient({
       </header>
 
       <section className="relative px-6 py-16 sm:py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-br from-steel to-ink" />
-        <div className="absolute inset-0 flex items-center justify-center text-paper/30 text-xs tracking-wide">
-          photo placeholder
-        </div>
+        <Image
+          src={getProductImageUrl("sinigang.jpg")}
+          alt=""
+          fill
+          priority
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-linear-to-br from-ink/70 to-ink/90" />
         <div className="relative max-w-lg">
           <p className="text-annatto font-medium text-sm mb-3">Fresh today</p>
           <h2 className="text-4xl sm:text-5xl font-semibold text-paper leading-tight mb-2">
