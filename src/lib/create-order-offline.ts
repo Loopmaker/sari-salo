@@ -83,6 +83,7 @@ export async function createOrderOffline(cart: CartLineInput[]) {
         createdAt: now,
         nextAttemptAt: now, // immediately eligible for the first sync attempt
         permanentFailure: false,
+        syncingStartedAt: null,
       });
     },
   );

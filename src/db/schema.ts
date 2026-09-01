@@ -64,6 +64,7 @@ interface LocalSyncOperation {
   createdAt: string;
   nextAttemptAt: string;
   permanentFailure: boolean;
+  syncingStartedAt: string | null;
 }
 
 interface TerminalMeta {

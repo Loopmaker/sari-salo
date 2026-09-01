@@ -3,6 +3,9 @@ import { db } from "@/db/schema";
 const BACKOFF_SCHEDULE_MS = [5_000, 15_000, 60_000, 300_000, 900_000]; // 5s..15m
 const MAX_ATTEMPTS = BACKOFF_SCHEDULE_MS.length;
 
+const REQUEST_TIMEOUT_MS = 15_000; // 15s
+const STALE_SYNCING_THRESHOLD_MS = 45_000; // 45s — comfortable margin above REQUEST_TIMEOUT_MS
+
 function computeNextAttempt(attempts: number): string {
   const delay =
     BACKOFF_SCHEDULE_MS[Math.min(attempts, BACKOFF_SCHEDULE_MS.length - 1)];
@@ -43,26 +46,54 @@ async function getSyncableOperations() {
   );
 }
 
+async function recoverStaleSyncingOperations() {
+  const now = Date.now();
+
+  const stuck = await db.syncOperations
+    .where("status")
+    .equals("SYNCING")
+    .filter((op) => {
+      if (!op.syncingStartedAt) return true; // defensive: no timestamp means we can't confirm it's fresh
+      return (
+        now - new Date(op.syncingStartedAt).getTime() >
+        STALE_SYNCING_THRESHOLD_MS
+      );
+    })
+    .toArray();
+
+  for (const op of stuck) {
+    await db.syncOperations.update(op.id, {
+      status: "PENDING",
+      syncingStartedAt: null,
+    });
+  }
+}
+
 async function sendCreateOrder(
   payload: Record<string, unknown>,
 ): Promise<{ ok: boolean; status: number | null }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
-    // 200 (alreadyExisted) and 201 (created) both count as success —
-    // idempotency means a duplicate is not a failure.
     return { ok: res.ok, status: res.status };
   } catch {
     return { ok: false, status: null };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
 async function sendUpdateStatus(payload: {
   statusEvent: { orderId: string; [key: string]: unknown };
 }): Promise<{ ok: boolean; status: number | null }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(
       `/api/orders/${payload.statusEvent.orderId}/status-events`,
@@ -70,18 +101,24 @@ async function sendUpdateStatus(payload: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       },
     );
     return { ok: res.ok, status: res.status };
   } catch {
     return { ok: false, status: null };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
 async function processOperation(
   op: Awaited<ReturnType<typeof getSyncableOperations>>[number],
 ) {
-  await db.syncOperations.update(op.id, { status: "SYNCING" });
+  await db.syncOperations.update(op.id, {
+    status: "SYNCING",
+    syncingStartedAt: new Date().toISOString(),
+  });
 
   const result =
     op.operation === "CREATE_ORDER"
@@ -93,7 +130,10 @@ async function processOperation(
         );
 
   if (result.ok) {
-    await db.syncOperations.update(op.id, { status: "SYNCED" });
+    await db.syncOperations.update(op.id, {
+      status: "SYNCED",
+      syncingStartedAt: null,
+    });
 
     if (op.entityType === "ORDER") {
       await db.orders.update(op.entityId, { syncStatus: "SYNCED" });
@@ -114,6 +154,7 @@ async function processOperation(
     lastError: `HTTP ${result.status ?? "network error"}`,
     nextAttemptAt: computeNextAttempt(attempts),
     permanentFailure,
+    syncingStartedAt: null,
   });
 
   if (permanentFailure) {
@@ -135,6 +176,8 @@ export async function runSyncCycle(): Promise<void> {
     const heartbeatOk = await checkHeartbeat();
     setLastHeartbeatOk(heartbeatOk);
     if (!heartbeatOk) return;
+
+    await recoverStaleSyncingOperations();
 
     const operations = await getSyncableOperations();
     for (const op of operations) {
