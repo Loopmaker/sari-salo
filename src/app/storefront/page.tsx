@@ -20,27 +20,30 @@ async function getStorefrontCatalog(): Promise<{
     orderBy: { name: "asc" },
   });
 
-  const serialized: StorefrontCategory[] = categories.map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    products: cat.products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price.toString(),
-      imagePath: p.imagePath ?? undefined,
-    })),
-  }));
+  const CATEGORY_ORDER = ["Meals", "Drinks", "Desserts"];
+  const categoryRank = (name: string) => {
+    const index = CATEGORY_ORDER.indexOf(name);
+    return index === -1 ? CATEGORY_ORDER.length : index;
+  };
 
-  const FEATURED_CATEGORY_PRIORITY = ["Meals"];
-  const categoriesForSpecial = [...serialized].sort((a, b) => {
-    const aIsPriority = FEATURED_CATEGORY_PRIORITY.includes(a.name);
-    const bIsPriority = FEATURED_CATEGORY_PRIORITY.includes(b.name);
-    if (aIsPriority && !bIsPriority) return -1;
-    if (bIsPriority && !aIsPriority) return 1;
-    return 0; // otherwise preserve existing (alphabetical) order
-  });
+  const serialized: StorefrontCategory[] = categories
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      products: cat.products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price.toString(),
+        imagePath: p.imagePath ?? undefined,
+      })),
+    }))
+    .sort((a, b) => {
+      const rankDiff = categoryRank(a.name) - categoryRank(b.name);
+      if (rankDiff !== 0) return rankDiff;
+      return a.name.localeCompare(b.name); // fallback for unlisted categories
+    });
 
-  const todaysSpecial = categoriesForSpecial
+  const todaysSpecial = serialized
     .filter((cat) => cat.products.length > 0)
     .slice(0, 3)
     .map((cat) => cat.products[0]);

@@ -35,6 +35,9 @@ const COLUMNS: { status: OrderStatus; label: string; colorClass: string }[] = [
 
 const REALTIME_SETTLE_DELAY_MS = 3000;
 
+// Temporary while Supabase Realtime is affected by a PoolingReplicationError
+const POLL_INTERVAL_MS = 12_000; // 12s
+
 async function fetchKitchenOrders(): Promise<KitchenOrder[]> {
   const res = await fetch("/api/kitchen/orders");
   const data = await res.json();
@@ -85,30 +88,39 @@ export function KitchenBoard() {
   const bufferedEventsRef = useRef<
     { newRow?: { id: string; status: OrderStatus }; oldRow?: { id: string } }[]
   >([]);
+
   const refetchTokenRef = useRef(0);
   const removedIdsRef = useRef<Set<string>>(new Set());
   const ordersRef = useRef<KitchenOrder[]>([]);
+  const isFetchingRef = useRef(false);
 
   function commitOrders(next: KitchenOrder[]) {
     ordersRef.current = next;
     setOrders(next);
   }
 
-  function triggerCoalescedRefetch() {
+  function reconcileWithServer() {
+    if (!readyRef.current) return; // initial connect/settle sequence still in progress
+    if (isFetchingRef.current) return; // avoid overlapping fetches
+
+    isFetchingRef.current = true;
     const myToken = ++refetchTokenRef.current;
-    fetchKitchenOrders().then((fresh) => {
-      if (myToken !== refetchTokenRef.current) return;
-      const knownIds = new Set(ordersRef.current.map((o) => o.id));
-      const additions = fresh.filter(
-        (o) =>
-          !knownIds.has(o.id) &&
-          !removedIdsRef.current.has(o.id) &&
-          ACTIVE_STATUSES.includes(o.status),
-      );
-      if (additions.length > 0) {
-        commitOrders([...ordersRef.current, ...additions]);
-      }
-    });
+
+    fetchKitchenOrders()
+      .then((fresh) => {
+        if (myToken !== refetchTokenRef.current) return; // superseded by a newer reconcile
+        const reconciled = fresh.filter(
+          (o) => !removedIdsRef.current.has(o.id),
+        );
+        commitOrders(reconciled);
+      })
+      .catch(() => {
+        // A failed poll/refetch shouldn't crash the board — the next
+        // cycle will retry.
+      })
+      .finally(() => {
+        isFetchingRef.current = false;
+      });
   }
 
   useEffect(() => {
@@ -137,7 +149,7 @@ export function KitchenBoard() {
             removedIdsRef.current,
           );
           commitOrders(result.orders);
-          if (result.needsRefetch) triggerCoalescedRefetch();
+          if (result.needsRefetch) reconcileWithServer();
         },
       );
 
@@ -185,7 +197,7 @@ export function KitchenBoard() {
         commitOrders(result);
         setConnectionState("connected");
 
-        if (needsRefetchAfterInit) triggerCoalescedRefetch();
+        if (needsRefetchAfterInit) reconcileWithServer();
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -195,6 +207,14 @@ export function KitchenBoard() {
       cancelled = true;
       supabase.removeChannel(channel);
     };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      reconcileWithServer();
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   async function advanceOrder(order: KitchenOrder) {
