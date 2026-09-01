@@ -1,13 +1,17 @@
 # Sari-Salo
 
-An offline-first point-of-sale (POS) app for small Filipino food stalls, with a live kitchen display.
+An offline-capable point-of-sale (POS) app for small Filipino food stalls, with a kitchen display and customer order-ahead page.
 
-I built Sari-Salo to practice building a web app that can still work when the internet is unreliable. The project focuses on offline storage, syncing, retries, and keeping orders updated between the cashier, storefront, and kitchen.
+The cashier can create orders even without an internet connection. Orders are saved locally in IndexedDB and synced with the backend once the connection comes back.
+
+The kitchen currently depends on the backend, so orders created while the cashier is offline will only appear in the kitchen after they successfully sync.
+
+I built Sari-Salo to learn more about offline storage, background syncing, retries, and keeping data consistent between different parts of a web app.
 
 ## What it does
 
-- Cashiers can browse products, build a cart, and place orders even when offline.
-- Orders are saved locally and automatically synced when the connection comes back.
+- Cashiers can browse products, build a cart, and create orders while offline.
+- Orders are saved locally and synced automatically when the connection returns.
 - Customers can order ahead from the storefront without creating an account.
 - The kitchen display receives orders from both the cashier and storefront.
 - Kitchen staff can move orders through `New → Preparing → Ready → Complete`.
@@ -15,27 +19,31 @@ I built Sari-Salo to practice building a web app that can still work when the in
 
 ## Why I built it
 
-My earlier projects mostly focused on CRUD features, authentication, and dashboards. For this project, I wanted to learn more about what happens when the network is unreliable.
+My earlier projects mostly focused on CRUD features, authentication, and dashboards. For this project, I wanted to work on something where the app could not always depend on the internet being available.
 
-The main flow I worked on was:
+The main challenge was figuring out how to save an order locally, sync it later, and make sure retries would not create duplicate orders.
+
+The main flow is:
 
 **Cashier → Local storage → Sync queue → API → PostgreSQL → Kitchen**
 
-I also wanted to understand how to avoid duplicate orders, handle failed requests, and deal with multiple devices updating the same order.
+This project also gave me a chance to learn about things I had not worked with much before, such as IndexedDB, background synchronization, idempotent APIs, and handling updates from multiple devices.
 
-## Main features
+## Main Features
 
-### Offline-first orders
+### Offline-capable cashier
 
 Orders are saved to the browser's IndexedDB using Dexie before being sent to the server.
 
-This allows the cashier to continue creating orders when the internet is unavailable. Once the connection comes back, the sync process sends the pending orders to the API.
+This means the cashier can continue creating orders when the internet is unavailable. Once the connection comes back, the sync process sends the pending orders to the API.
+
+The kitchen does not receive these orders while the cashier is offline. It only receives them after they successfully reach the backend.
 
 ### Safe retries
 
 Each order gets a UUID on the client before it is sent to the server.
 
-The same ID is reused when an order is retried. The API uses this ID to prevent the same order from being created twice.
+The same ID is reused when an order is retried. The API checks this ID so the same order is not accidentally created twice.
 
 This is used by both the cashier and storefront checkout.
 
@@ -45,13 +53,13 @@ Multiple devices can update the same order.
 
 Sari-Salo uses a simple **last-write-wins (LWW)** approach based on `clientModifiedAt`.
 
-Local changes that have not finished syncing are also protected from being overwritten by incoming Realtime updates.
+There is also a rule that protects local changes that have not finished syncing from being overwritten by incoming Realtime updates.
 
 ### Retry and failure handling
 
 The sync system handles different types of failures:
 
-- Temporary network/server errors are retried with increasing delays.
+- Temporary network or server errors are retried with increasing delays.
 - Invalid requests are not retried forever.
 - Orders that permanently fail are marked for manual attention.
 - The cashier can see when an order needs attention.
@@ -60,11 +68,11 @@ The sync system handles different types of failures:
 
 The kitchen display uses Supabase Realtime for live order updates.
 
-The API is used for the initial order list, while Realtime is used to receive changes afterward.
+The API provides the initial order list, while Realtime is used to receive changes afterward.
 
-Supabase Realtime is currently affected by a `PoolingReplicationError` in my project. I checked the database publication, permissions, and replica identity setup and also reset the Realtime configuration while investigating the issue.
+At the moment, Supabase Realtime is not working reliably in this project because of a `PoolingReplicationError`. I investigated the database publication, permissions, and replica identity setup and also reset the Realtime configuration while troubleshooting it.
 
-As a temporary fallback, the kitchen display polls the API every 12 seconds. This means orders can still update automatically, although they may take a few seconds to appear.
+As a fallback, the kitchen display polls the API every 12 seconds. This means orders still update automatically, but there can be a short delay.
 
 ## Tech Stack
 
@@ -81,7 +89,7 @@ As a temporary fallback, the kitchen display polls the API every 12 seconds. Thi
 - Storefront: `/storefront`
 - Kitchen: `/kitchen`
 
-## Data flow
+## Data Flow
 
 ```text
 Cashier creates order
@@ -101,7 +109,9 @@ Supabase Realtime sends the update
 Kitchen display updates
 ```
 
-## Known limitations
+```
+
+## Known Limitations
 
 Sari-Salo is a **v1 portfolio project**, so it does not include everything a production POS system would need.
 
@@ -111,21 +121,23 @@ There is currently no login or role-based access control.
 
 Anyone who can access the application can open the cashier or kitchen screens. This is acceptable for the current demo but would need to be changed for a real deployment.
 
+### Offline orders are not visible to the kitchen
+
+The cashier can create and save orders while offline, but the kitchen depends on the backend.
+
+An offline order will only appear on the kitchen display after the cashier reconnects and the order successfully syncs.
+
 ### Simple conflict resolution
 
 The app uses last-write-wins instead of a more advanced conflict resolution system.
 
-This keeps the implementation easier to understand, but one update can replace another when multiple devices change the same order.
+This keeps the implementation simpler, but one update can replace another when multiple devices change the same order.
 
 ### Terminal identity uses browser storage
 
 Each cashier terminal has a locally stored ID.
 
 Clearing the browser's site data creates a new terminal identity. A production system would need proper device registration.
-
-### Offline orders are not visible to the kitchen
-
-An order created while offline will not appear on the kitchen display until it successfully syncs with the server.
 
 ### Kitchen updates can be delayed
 
@@ -151,11 +163,11 @@ After placing an order, customers can see their order number on the confirmation
 
 ### Anonymous database access
 
-The current application does not have authentication, so the Supabase security rules are limited for this v1 version.
+The application does not have authentication yet, so the current Supabase security setup is limited for this v1 version.
 
 This would need to be improved before using the application in production.
 
-## What I'd build next
+## What I'd Build Next
 
 If I continued developing Sari-Salo, I would work on:
 
@@ -167,7 +179,7 @@ If I continued developing Sari-Salo, I would work on:
 6. Storefront order tracking
 7. Revisit the Realtime and polling setup once the Supabase issue is resolved
 
-## Development process
+## Development Process
 
 I built Sari-Salo in several phases instead of trying to build everything at once.
 
@@ -177,23 +189,25 @@ I used Claude as an implementation and brainstorming tool, while reviewing the c
 
 The project went through several iterations after finding issues with synchronization, retries, race conditions, and checkout idempotency.
 
-One useful part of the project was testing what happens outside the normal "everything works" scenario — such as losing the internet, retrying requests, having multiple devices update an order, or dealing with a third-party service problem.
+One of the more useful parts of building this project was testing what happens outside the normal "everything works" scenario — such as losing the internet, retrying requests, having multiple devices update an order, or dealing with a third-party service problem.
 
-## Project status
+It helped me understand that building a web app is not only about making the normal flow work. You also need to think about what happens when things fail.
+
+## Project Status
 
 Sari-Salo is an actively developed **v1 portfolio project**.
 
-The project demonstrates my experience with:
+The project demonstrates my experience and learning in:
 
-- Offline-first web applications
-- IndexedDB and local storage
+- Building offline-capable web applications
+- IndexedDB and local persistence
 - Background synchronization
 - API idempotency
 - Basic conflict resolution
 - Retry and error handling
-- PostgreSQL
-- Prisma
+- PostgreSQL and Prisma
 - Supabase
 - Real-time updates
-- Concurrency and race-condition handling
+- Handling concurrent updates
 - Debugging third-party service issues
+```
