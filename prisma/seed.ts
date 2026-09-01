@@ -95,10 +95,10 @@ async function main() {
   });
 
   await prisma.product.upsert({
-    where: { id: "a7b1c4d5-9e6f-4a7b-c2d3-4e5f6a7b8c9d" },
+    where: { id: "a7b1c4d5-9e6f-4a7b-82d3-4e5f6a7b8c9d" },
     update: {},
     create: {
-      id: "a7b1c4d5-9e6f-4a7b-c2d3-4e5f6a7b8c9d",
+      id: "a7b1c4d5-9e6f-4a7b-82d3-4e5f6a7b8c9d",
       categoryId: meals.id,
       name: "Pancit Bihon",
       price: 90.0,
@@ -108,10 +108,10 @@ async function main() {
   });
 
   await prisma.product.upsert({
-    where: { id: "b8c2d5e6-af70-4b8c-d3e4-5f6a7b8c9d0e" },
+    where: { id: "b8c2d5e6-af70-4b8c-93e4-5f6a7b8c9d0e" },
     update: {},
     create: {
-      id: "b8c2d5e6-af70-4b8c-d3e4-5f6a7b8c9d0e",
+      id: "b8c2d5e6-af70-4b8c-93e4-5f6a7b8c9d0e",
       categoryId: drinks.id,
       name: "Calamansi Juice",
       price: 30.0,
@@ -121,10 +121,10 @@ async function main() {
   });
 
   await prisma.product.upsert({
-    where: { id: "c9d3e6f7-b081-4c9d-e4f5-6a7b8c9d0e1f" },
+    where: { id: "c9d3e6f7-b081-4c9d-a4f5-6a7b8c9d0e1f" },
     update: {},
     create: {
-      id: "c9d3e6f7-b081-4c9d-e4f5-6a7b8c9d0e1f",
+      id: "c9d3e6f7-b081-4c9d-a4f5-6a7b8c9d0e1f",
       categoryId: drinks.id,
       name: "Iced Tea",
       price: 25.0,
@@ -134,10 +134,10 @@ async function main() {
   });
 
   await prisma.product.upsert({
-    where: { id: "d0e4f7a8-c192-4d0e-f506-7b8c9d0e1f2a" },
+    where: { id: "d0e4f7a8-c192-4d0e-b506-7b8c9d0e1f2a" },
     update: {},
     create: {
-      id: "d0e4f7a8-c192-4d0e-f506-7b8c9d0e1f2a",
+      id: "d0e4f7a8-c192-4d0e-b506-7b8c9d0e1f2a",
       categoryId: desserts.id,
       name: "Turon",
       price: 20.0,

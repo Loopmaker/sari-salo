@@ -118,23 +118,27 @@ export function StorefrontClient({
 
   function handleCloseCart() {
     setCartOpen(false);
-    // Always reset the view on close — reopening should start fresh
-    // (either back at the cart, or ready for the next order after a
-    // confirmed one, never stuck mid-checkout on the name form).
     setCheckoutView("cart");
     setSubmitError(null);
   }
+
+  const pendingOrderIdRef = useRef<string | null>(null);
 
   async function handleSubmitOrder() {
     if (customerName.trim().length === 0 || cart.length === 0) return;
     setSubmitting(true);
     setSubmitError(null);
 
+    if (pendingOrderIdRef.current === null) {
+      pendingOrderIdRef.current = crypto.randomUUID();
+    }
+
     try {
       const res = await fetch("/api/storefront/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: pendingOrderIdRef.current,
           customerName: customerName.trim(),
           items: cart.map((line) => ({
             productId: line.productId,
@@ -161,6 +165,7 @@ export function StorefrontClient({
       setCart([]);
       setCustomerName("");
       setCheckoutView("confirmed");
+      pendingOrderIdRef.current = null;
     } catch {
       setSubmitError("Network error — order not placed.");
     } finally {

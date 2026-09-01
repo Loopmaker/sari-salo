@@ -15,7 +15,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { customerName, items } = parsed.data;
+  const { id, customerName, items } = parsed.data;
+
+  const existingOrder = await prisma.order.findUnique({ where: { id } });
+  if (existingOrder) {
+    return NextResponse.json(
+      {
+        orderNumber: existingOrder.orderNumber,
+        customerName: existingOrder.customerName,
+        total: existingOrder.total.toString(),
+      },
+      { status: 200 },
+    );
+  }
+
   const productIds = items.map((i) => i.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds } },
@@ -59,7 +72,7 @@ export async function POST(req: NextRequest) {
       const now = new Date();
       const newOrder = await tx.order.create({
         data: {
-          id: crypto.randomUUID(),
+          id,
           orderNumber,
           terminalId,
           status: "NEW",
