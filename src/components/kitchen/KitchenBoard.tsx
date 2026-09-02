@@ -245,6 +245,14 @@ export function KitchenBoard() {
           message = data.error ?? message;
         } catch {}
         setAdvanceError(message);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.applied) {
+        setAdvanceError(
+          "Update rejected — a more recent status change already exists for this order.",
+        );
       }
     } catch {
       setAdvanceError("Network error — status not updated.");
