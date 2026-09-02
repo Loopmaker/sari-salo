@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { OrderCard } from "./OrderCard";
 import { getKitchenTerminalId } from "@/lib/kitchen-terminal";
@@ -77,6 +79,7 @@ function applyOrderEvent(
 }
 
 export function KitchenBoard() {
+  const router = useRouter();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [advancingId, setAdvancingId] = useState<string | null>(null);
@@ -261,37 +264,60 @@ export function KitchenBoard() {
     }
   }
 
+  async function handleLogout() {
+    await fetch("/api/kitchen/logout", { method: "POST" });
+    router.push("/kitchen/login");
+    router.refresh();
+  }
+
   if (loading) {
     return <div className="p-8 text-ink/50">Loading orders...</div>;
   }
 
   return (
-    <div className="p-4">
-      {advanceError && (
-        <div className="mb-4 text-status-attention text-sm">{advanceError}</div>
-      )}
-      <div className="flex gap-4 h-screen">
-        {COLUMNS.map((col) => (
-          <div key={col.status} className="flex-1 bg-counter/40 rounded-lg p-3">
-            <h2 className={`font-semibold mb-3 ${col.colorClass}`}>
-              {col.label}
-            </h2>
-            <div className="space-y-3">
-              {orders
-                .filter((o) => o.status === col.status)
-                .map((order) => (
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    onAdvance={advanceOrder}
-                    advancing={advancingId === order.id}
-                  />
-                ))}
-            </div>
-          </div>
-        ))}
+    <div>
+      <div className="flex justify-between items-center px-4 py-3 border-b border-counter-line">
+        <h1 className="font-semibold text-ink">Kitchen</h1>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 text-sm text-ink/50 hover:text-ink/80 transition-colors px-2 py-1.5 rounded-lg hover:bg-counter"
+        >
+          <LogOut size={16} strokeWidth={2} aria-hidden="true" />
+          Log out
+        </button>
       </div>
-      <KitchenSyncIndicator connectionState={connectionState} />
+      <div className="p-4">
+        {advanceError && (
+          <div className="mb-4 text-status-attention text-sm">
+            {advanceError}
+          </div>
+        )}
+        <div className="flex gap-4 h-screen">
+          {COLUMNS.map((col) => (
+            <div
+              key={col.status}
+              className="flex-1 bg-counter/40 rounded-lg p-3"
+            >
+              <h2 className={`font-semibold mb-3 ${col.colorClass}`}>
+                {col.label}
+              </h2>
+              <div className="space-y-3">
+                {orders
+                  .filter((o) => o.status === col.status)
+                  .map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onAdvance={advanceOrder}
+                      advancing={advancingId === order.id}
+                    />
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <KitchenSyncIndicator connectionState={connectionState} />
+      </div>
     </div>
   );
 }

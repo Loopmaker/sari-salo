@@ -83,11 +83,21 @@ As a fallback, the kitchen display polls the API every 12 seconds. This means or
 - **Supabase Realtime** — live order updates
 - **Zod** — API validation
 
-## Routes
+### Routes
 
 - Cashier: `/`
-- Storefront: `/storefront`
-- Kitchen: `/kitchen`
+- Storefront (order-ahead): `/storefront`
+- Kitchen: `/kitchen` (protected by a shared password)
+
+### Demo credentials
+
+The kitchen display is protected by a simple shared password for the demo.
+
+- **Password:** `kitchendemo123`
+
+This is not a full user account system. It uses one shared password instead of individual staff accounts, which keeps the authentication simple for this v1 project.
+
+The login protects both the kitchen page and the API endpoint used to update order statuses, rather than only hiding the page in the UI.
 
 ## Data Flow
 
