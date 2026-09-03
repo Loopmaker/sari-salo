@@ -14,6 +14,7 @@ function computeNextAttempt(attempts: number): string {
 
 function classifyFailure(httpStatus: number | null): "retryable" | "permanent" {
   if (httpStatus === null) return "retryable"; // network error/timeout, no response at all
+  if (httpStatus === 429) return "retryable"; // rate limited — expected to succeed on retry
   if (httpStatus >= 500) return "retryable";
   if (httpStatus >= 400 && httpStatus < 500) return "permanent";
   return "retryable";

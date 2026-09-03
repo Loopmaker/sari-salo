@@ -3,8 +3,27 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createStorefrontOrderSchema } from "@/lib/validation/storefront-order";
 import { allocateStorefrontOrderNumber } from "@/lib/storefront-order-number";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+const STOREFRONT_ORDER_RATE_LIMIT = 5; // per 10 minutes, per IP
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const { allowed } = await checkRateLimit(
+    "storefront-order",
+    ip,
+    STOREFRONT_ORDER_RATE_LIMIT,
+  );
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "Too many orders placed recently. Please wait a few minutes and try again.",
+      },
+      { status: 429 },
+    );
+  }
+
   const body = await req.json();
   const parsed = createStorefrontOrderSchema.safeParse(body);
 

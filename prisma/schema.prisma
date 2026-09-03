@@ -73,12 +73,14 @@ model Order {
   @@index([createdAt])
 }
 
-// Atomic, server-authoritative sequence for storefront order numbers.
-// One row per stall business day (Asia/Manila) — see
-// lib/storefront-order-number.ts for how it's incremented and why.
 model DailyOrderCounter {
   date  String @id
   count Int    @default(0)
+}
+
+model RateLimitEntry {
+  id    String @id
+  count Int    @default(1)
 }
 
 model OrderItem {

@@ -2,8 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createOrderSchema } from "@/lib/validation/order";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+const CASHIER_ORDER_RATE_LIMIT = 30; // per 10 minutes, per IP
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const { allowed } = await checkRateLimit(
+    "cashier-order",
+    ip,
+    CASHIER_ORDER_RATE_LIMIT,
+  );
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again shortly." },
+      { status: 429 },
+    );
+  }
+
   const body = await req.json();
   const parsed = createOrderSchema.safeParse(body);
 
