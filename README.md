@@ -85,9 +85,9 @@ As a fallback, the kitchen display polls the API every 12 seconds. This means or
 
 ### Routes
 
-- Cashier: `/`
-- Storefront (order-ahead): `/storefront`
-- Kitchen: `/kitchen` (protected by a shared password)
+- Storefront (order-ahead): `/`
+- Cashier: `/pos`
+- Kitchen: `/kitchen` (protected — see demo credentials below)
 
 ### Demo credentials
 

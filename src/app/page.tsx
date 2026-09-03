@@ -1,61 +1,62 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { db } from "@/db/schema";
-import { getOrCreateTerminal } from "@/lib/terminal";
-import { refreshCatalogFromServer } from "@/lib/catalog-sync";
-import { POSClient, type Category } from "@/components/pos/POSClient";
+import { prisma } from "@/lib/prisma";
+import {
+  StorefrontClient,
+  type StorefrontCategory,
+} from "@/components/storefront/StorefrontClient";
+import type { StorefrontProduct } from "@/components/storefront/StorefrontProductCard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { SyncEngineProvider } from "@/components/SyncEngineProvider";
 
-export default function Home() {
-  const [categories, setCategories] = useState<Category[] | null>(null);
+async function getStorefrontCatalog(): Promise<{
+  categories: StorefrontCategory[];
+  todaysSpecial: StorefrontProduct[];
+}> {
+  const categories = await prisma.category.findMany({
+    include: {
+      products: {
+        where: { active: true },
+        orderBy: { name: "asc" },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
 
-  useEffect(() => {
-    let cancelled = false;
+  const CATEGORY_ORDER = ["Meals", "Drinks", "Desserts"];
+  const categoryRank = (name: string) => {
+    const index = CATEGORY_ORDER.indexOf(name);
+    return index === -1 ? CATEGORY_ORDER.length : index;
+  };
 
-    async function boot() {
-      await getOrCreateTerminal();
-      const localCategories = await loadCategoriesFromDexie();
-      if (!cancelled) setCategories(localCategories);
-      if (navigator.onLine) {
-        const result = await refreshCatalogFromServer();
-        if (result.ok && !cancelled) {
-          const refreshed = await loadCategoriesFromDexie();
-          setCategories(refreshed);
-        }
-      }
-    }
+  const serialized: StorefrontCategory[] = categories
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      products: cat.products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price.toString(),
+        imagePath: p.imagePath ?? undefined,
+      })),
+    }))
+    .sort((a, b) => {
+      const rankDiff = categoryRank(a.name) - categoryRank(b.name);
+      if (rankDiff !== 0) return rankDiff;
+      return a.name.localeCompare(b.name); // fallback for unlisted categories
+    });
 
-    boot();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const todaysSpecial = serialized
+    .filter((cat) => cat.products.length > 0)
+    .slice(0, 3)
+    .map((cat) => cat.products[0]);
 
-  if (categories === null) {
-    return <div className="p-8 text-gray-400">Loading catalog...</div>;
-  }
-
-  return (
-    <ErrorBoundary fallbackMessage="Reload the page to continue taking orders.">
-      <SyncEngineProvider />
-      <POSClient categories={categories} />
-    </ErrorBoundary>
-  );
+  return { categories: serialized, todaysSpecial };
 }
 
-async function loadCategoriesFromDexie(): Promise<Category[]> {
-  const [cats, products] = await Promise.all([
-    db.categories.toArray(),
-    db.products.toArray(),
-  ]);
+export default async function StorefrontPage() {
+  const { categories, todaysSpecial } = await getStorefrontCatalog();
 
-  return cats.map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    products: products
-      .filter((p) => p.categoryId === cat.id && p.active)
-      .map((p) => ({ id: p.id, name: p.name, price: p.price })),
-  }));
+  return (
+    <ErrorBoundary fallbackMessage="Reload the page to continue browsing the menu.">
+      <StorefrontClient categories={categories} todaysSpecial={todaysSpecial} />
+    </ErrorBoundary>
+  );
 }
